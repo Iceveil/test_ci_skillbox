@@ -8,7 +8,9 @@ apispec-webframeworks==1.2.0
 async-lru==2.3.0
 black==26.5.1
 fastapi==0.136.1
-flake8==7.3.0
+flake8==4.0.1
+flake8-bugbear==22.1.11
+flake8-pie==0.15.0
 mypy==2.3.1
 mypy_extensions==1.1.0
 pydantic==2.13.4
