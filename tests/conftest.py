@@ -1,4 +1,3 @@
-# module_26_fastapi/homework/tests/conftest.py
 
 import asyncio
 import pytest
@@ -8,14 +7,12 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import text
 
-from ..database import Base
-import module_26_fastapi.homework.database as db_module
+from ..database import Base, db_module
 from ..main import app
 
 
-
-
 TEST_URL = "sqlite+aiosqlite:///test_db.db"
+
 
 test_engine = create_async_engine(TEST_URL, echo=False)
 test_session = sessionmaker(test_engine, expire_on_commit=False, class_=AsyncSession)
@@ -42,7 +39,6 @@ async def setup_db():
         tables = [row[0] for row in result.fetchall()]
         print(f"Созданы таблицы: {tables}")
 
-        # Проверяем наличие recepts
         assert 'recepts' in tables, "Таблица 'recepts' не была создана!"
 
     yield
@@ -55,17 +51,13 @@ async def setup_db():
 @pytest.fixture(scope="function")
 async def db_session(setup_db):
     """Создаёт тестовую сессию и ПОДМЕНЯЕТ глобальную"""
-    # Сохраняем оригинальную сессию
     original_session = db_module.session
 
-    # Создаём тестовую сессию БЕЗ begin()
     async with test_session() as sess:
-        # ПОДМЕНЯЕМ ГЛОБАЛЬНУЮ СЕССИЮ
         db_module.session = sess
 
         yield sess
 
-        # Восстанавливаем оригинальную сессию
         db_module.session = original_session
 
 
@@ -73,18 +65,15 @@ async def db_session(setup_db):
 async def client(db_session):
     """Создаёт HTTP клиент с подменой зависимости БД"""
 
-    # Подменяем зависимость get_db на тестовую сессию
     async def override_get_db():
         yield db_session
 
     app.dependency_overrides[db_module.get_db] = override_get_db
 
-    # Создаём клиент с ASGITransport для FastAPI
     transport = ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
         yield c
 
-    # Очищаем подмену после теста
     app.dependency_overrides.clear()
 
 pytest_plugins = ('pytest_asyncio',)
