@@ -1,7 +1,7 @@
 from typing import List, Dict, Any
 
 from fastapi import FastAPI, Depends
-from . import schemas
+import schemas
 from .database import get_db, Base, engine
 from .models import ReceptDetails, Recept
 from sqlalchemy import select, update, text
