@@ -30,6 +30,6 @@ jobs:
 
       - name: Test with pytest
         run: |
-          PYTHONPATH=$PYTHONPATH:${{ github.workspace }} pytest -v
+          PYTHONPATH=$PYTHONPATH:${{ github.workspace }} python -m pytest -v
         env:
           PYTHONPATH: ${{ github.workspace }}
