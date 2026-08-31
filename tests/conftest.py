@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import text
 
-from .database import Base, db_module
-from .main import app
+from database import Base, db_module
+from main import app
 
 
 TEST_URL = "sqlite+aiosqlite:///test_db.db"
