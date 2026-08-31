@@ -8,6 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import text
 
 import database as db_module
+from database import Base, get_db
 from main import app
 
 
