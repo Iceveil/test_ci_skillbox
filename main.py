@@ -1,9 +1,9 @@
 from typing import List, Dict, Any
 
-from fastapi import FastAPI
-import schemas
-from database import session, engine, Base
-from models import ReceptDetails, Recept
+from fastapi import FastAPI, Depends
+from . import schemas
+from .database import get_db
+from .models import ReceptDetails, Recept
 from sqlalchemy import select, update
 
 
@@ -11,27 +11,28 @@ app = FastAPI()
 
 
 @app.get('/recipes')
-async def get_recipes()-> List[Dict[str, Any]]:
+async def get_recipes(db: AsyncSession = Depends(get_db))-> List[Dict[str, Any]]:
     """Эндпоинт по получению всех рецпетов. Сортируется
     по количеству просмотров и времени приготовления"""
     query = select(Recept).order_by(Recept.count.desc(), Recept.time_to_done.asc())
-    result = await session.execute(query)
-    return result.scalars().all()
+    result = await db.execute(query)
+    recipes = result.scalars().all()
+    return [r.to_dict() for r in recipes]
 
 
 @app.get('/recipes/{recipes_id}')
-async def get_recipes_by_id(recipes_id: int)-> Dict[str, Any]:
+async def get_recipes_by_id(recipes_id: int, db: AsyncSession = Depends(get_db))-> Dict[str, Any]:
     """Эндпойнт по получению одного рецепта по его айди"""
     query = (select(ReceptDetails.recept_name, ReceptDetails.time_to_done,
                    ReceptDetails.description, ReceptDetails.ing_list)
             .where(ReceptDetails.parent_id == recipes_id))
-    result = await session.execute(query)
+    result = await db.execute(query)
     recept = result.all()
 
     upd_count = (update(Recept).where(Recept.id == recipes_id)
                  .values(count=Recept.count+1))
 
-    await session.execute(upd_count)
+    await db.execute(upd_count)
 
     return {
         'Название': recept[0][0],
@@ -43,7 +44,8 @@ async def get_recipes_by_id(recipes_id: int)-> Dict[str, Any]:
 
 
 @app.post('/recipes')
-async def add_recipes(recept: schemas.AddOneRecept)-> Dict[str, str]:
+async def add_recipes(recept: schemas.AddOneRecept,
+                      db: AsyncSession = Depends(get_db))-> Dict[str, str]:
     """Добавление рецепта"""
     add_in_recepts = Recept(
         recept_name=recept.recept_name,
@@ -51,8 +53,8 @@ async def add_recipes(recept: schemas.AddOneRecept)-> Dict[str, str]:
         time_to_done=recept.time_to_done,
     )
 
-    session.add(add_in_recepts)
-    await session.flush()
+    db.add(add_in_recepts)
+    await db.flush()
 
     new_recept = ReceptDetails(
         recept_name=recept.recept_name,
@@ -62,8 +64,8 @@ async def add_recipes(recept: schemas.AddOneRecept)-> Dict[str, str]:
         parent_id=add_in_recepts.id
     )
 
-    session.add(new_recept)
-    await session.commit()
+    db.add(new_recept)
+    await db.commit()
     return {'OK': f'Рецепт {recept.recept_name} добавлен'}
 
 
