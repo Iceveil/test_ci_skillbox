@@ -1,6 +1,6 @@
 import pytest
 from sqlalchemy import select
-from .models import Recept, ReceptDetails
+from models import Recept, ReceptDetails
 
 
 @pytest.mark.asyncio
