@@ -40,7 +40,7 @@ jobs:
 
       - name: Проверка сортировки импортов isort
         run: |
-          isort --check-only --diff .
+          isort --check-only --diff --profile black .
 
       - name: Test with pytest
         run: |
