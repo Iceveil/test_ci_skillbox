@@ -4,7 +4,7 @@ from fastapi import FastAPI, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 
-from . import schemas
+import schemas
 from .database import get_db, engine, Base
 from .models import ReceptDetails, Recept
 
