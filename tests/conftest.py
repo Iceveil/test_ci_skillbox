@@ -5,8 +5,7 @@ import database as db_module
 import pytest
 from httpx import ASGITransport
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import (AsyncSession, async_sessionmaker,
-                                    create_async_engine)
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from database import Base
 from main import app
