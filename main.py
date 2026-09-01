@@ -5,7 +5,6 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import schemas
-
 from database import Base, engine, get_db
 from models import Recept, ReceptDetails
 
