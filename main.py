@@ -1,11 +1,12 @@
 from typing import List, Dict, Any
 
 from fastapi import FastAPI, Depends
-import schemas
-from database import get_db, Base, engine
-from models import ReceptDetails, Recept
-from sqlalchemy import select, update, text
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, update
+
+from . import schemas
+from .database import get_db, engine, Base
+from .models import ReceptDetails, Recept
 
 
 app = FastAPI()
@@ -70,9 +71,9 @@ async def add_recipes(recept: schemas.AddOneRecept,
     return {'OK': f'Рецепт {recept.recept_name} добавлен'}
 
 
-# @app.post('/create_db')
-# async def create_db()-> Dict[str, bool]:
-#     """Создание таблиц. Запустить перед остальными операциями"""
-#     async with engine.begin() as conn:
-#         await conn.run_sync(Base.metadata.create_all)
-#         return {'ok': True}
+@app.post('/create_db')
+async def create_db()-> Dict[str, bool]:
+    """Создание таблиц. Запустить перед остальными операциями"""
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+        return {'ok': True}
