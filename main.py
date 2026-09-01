@@ -6,8 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import schemas
 
-from .database import Base, engine, get_db
-from .models import Recept, ReceptDetails
+from database import Base, engine, get_db
+from models import Recept, ReceptDetails
 
 app = FastAPI()
 
