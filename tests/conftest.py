@@ -1,28 +1,22 @@
-import sys
-import os
-from pathlib import Path
-
-root_dir = Path(__file__).parent.parent
-sys.path.insert(0, str(root_dir))
 
 import asyncio
 import pytest
 import httpx
 from httpx import ASGITransport
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy import text
 
-import database as db_module
-from database import Base, get_db
-from main import app
+from ..database import Base
+import module_26_fastapi.homework.database as db_module
+from ..main import app
+
+
 
 
 TEST_URL = "sqlite+aiosqlite:///test_db.db"
 
-
 test_engine = create_async_engine(TEST_URL, echo=False)
-test_session = sessionmaker(test_engine, expire_on_commit=False, class_=AsyncSession)
+test_session = async_sessionmaker(test_engine, expire_on_commit=False, class_=AsyncSession)
 
 print(f"Зарегистрированные таблицы: {list(Base.metadata.tables.keys())}")
 assert 'recepts' in Base.metadata.tables, "Таблица 'recepts' не зарегистрирована в Base!"
