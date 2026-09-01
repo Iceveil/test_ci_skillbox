@@ -1,43 +1,89 @@
-from .database import Base
+import asyncio
+
+import httpx
+import ..database as db_module
+import pytest
+from httpx import ASGITransport
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import (AsyncSession, async_sessionmaker,
+                                    create_async_engine)
+
+from ..database import Base
+from ..main import app
+
+TEST_URL = "sqlite+aiosqlite:///test_db.db"
+
+test_engine = create_async_engine(TEST_URL, echo=False)
+test_session = async_sessionmaker(
+    test_engine, expire_on_commit=False, class_=AsyncSession
+)
+
+print(f"Зарегистрированные таблицы: {list(Base.metadata.tables.keys())}")
+assert (
+    "recepts" in Base.metadata.tables
+), "Таблица 'recepts' не зарегистрирована в Base!"
 
 
-class Recept(Base):
-    """Таблица рецептов"""
-
-    __tablename__ = "recepts"
-    __table_args__ = {"extend_existing": True}
-    id = Column(Integer, primary_key=True, index=True)
-    recept_name = Column(String, index=True)
-    count = Column(Integer, index=True)
-    time_to_done = Column(Integer, index=True)
-    children = relationship("ReceptDetails", back_populates="parent")
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "recept_name": self.recept_name,
-            "count": self.count,
-            "time_to_done": self.time_to_done,
-        }
+@pytest.fixture(scope="session")
+def event_loop():
+    """Создаёт event loop для асинхронных тестов"""
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    yield loop
+    loop.close()
 
 
-class ReceptDetails(Base):
-    """Таблица с подробным описанием рецептов"""
+@pytest.fixture(scope="session")
+async def setup_db():
+    """Создаёт и удаляет таблицы БД для всех тестов"""
+    async with test_engine.begin() as conn:
+        print("===========================СОЗДАНИЕ===============================")
+        await conn.run_sync(Base.metadata.create_all)
+        result = await conn.execute(
+            text("SELECT name FROM sqlite_master WHERE type='table'")
+        )
+        tables = [row[0] for row in result.fetchall()]
+        print(f"Созданы таблицы: {tables}")
 
-    __tablename__ = "recept_details"
-    __table_args__ = {"extend_existing": True}
-    id = Column(Integer, primary_key=True, index=True)
-    recept_name = Column(String, index=True)
-    time_to_done = Column(Integer, index=True)
-    ing_list = Column(String, index=True)
-    description = Column(String, index=True)
-    parent_id = Column(Integer, ForeignKey("recepts.id"))
-    parent = relationship("Recept", back_populates="children")
+        assert "recepts" in tables, "Таблица 'recepts' не была создана!"
 
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "recept_name": self.recept_name,
-            "count": self.count,
-            "time_to_done": self.time_to_done,
-        }
+    yield
+
+    print("=== УДАЛЕНИЕ ТАБЛИЦ ===")
+    async with test_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+
+
+@pytest.fixture(scope="function")
+async def db_session(setup_db):
+    """Создаёт тестовую сессию и ПОДМЕНЯЕТ глобальную"""
+    original_session = db_module.session
+
+    async with test_session() as sess:
+        db_module.session = sess
+
+        yield sess
+
+        db_module.session = original_session
+
+
+@pytest.fixture(scope="function")
+async def client(db_session):
+    """Создаёт HTTP клиент с подменой зависимости БД"""
+
+    async def override_get_db():
+        yield db_session
+
+    app.dependency_overrides[db_module.get_db] = override_get_db
+
+    transport = ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
+        yield c
+
+    app.dependency_overrides.clear()
+
+
+pytest_plugins = ("pytest_asyncio",)
+
+
+def pytest_configure(config):
+    config.option.asyncio_mode = "auto"
